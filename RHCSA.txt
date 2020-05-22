@@ -1,0 +1,438 @@
+greroot       Exam prepartation of RHCSA-EX200 
+         Redhat 7 Linux     
+            2017
+***********************************
+
+1. Root password change
+2. Network configurartion
+3. Repo
+4. Useradd
+5. Permission 
+6. Acl
+7. Cronjob
+8. LDAP and Autofs
+9. NTP 
+10. Webserver
+11. Kernel update
+12. Grep
+13. Find
+14. File system partition
+15. Archive (Tar)
+
+
+
+
+
+
+
+
+
+
+
+A. Change the root password to “changeme”( This is the precondition you must meet it )
+Answer
+1. Poweron the system and on grub menu when countdown start press e and enter
+2. Go to the end of the line below and press space just after 8 and type rd.break and press ctrl+x
+
+Linux16 /vmlinuz -----------------------------------------------------------------------------------------------
+-------------------------------------------------------quiet LANG=enUS.UTF-8(space)rd.break(press ctrl+x)
+3. #mount -o remount,rw /sysroot
+4.#chroot /sysroot
+5.#passwd root
+ type new password for root: changeme
+ retype new password for root:changeme
+6.#touch /.autorelabel
+7.Exit
+8.Exit
+You see logout and after reboot login in as root using password(changeme1) 
+
+
+1. Setup Network and hostname as given below 
+IP: 192.168.0.10 
+Netmask: 255.255.255.0
+Gateway: 192.168.0.1
+DNS:192.168.0.254
+Hostname:client12.example.com
+
+Answer
+1. #cd /etc/sysconfig/network-scripts
+2. ls -l ifcfg-*  ( you will see all the file starting form ifcfg- now choose ifcfg-ens33)
+3. Vi  ifcfg-ens33  and add the following entry just below the lastline of the file
+      IPADDR=192.168.0.10
+ SUBNETMASK=255.255.255.0
+GATEWAY=192.168.0.1
+     DNS=192.168.0.254
+
+And save and exit(press Esc type :wq enter)
+
+Changing hostname
+#hostnamectl set-hostname client12.example.com
+# vi /etc/hosts
+Press i
+   192.168.0.11 client12.example.com	ravi (nickname)
+Save and exit (press Esc :wq enter) save and exit
+
+Now 
+Check your current target and change it to graphical.target if it is not so.
+For that 
+# systemctl get-default
+( if result of the command is garphical.target you don’t do anything 
+If it is multiuser-target then run the command to change it to graphical.target using the command below
+#systemctl set-default garphical.target
+Verify it 
+#systemctl get-default
+graphical.target will be your result ( then you are good).
+
+
+Now mask iptables ip6tables and firewalld.service
+#systemctl mask iptables.service
+#systemctl mask ip6tables.service
+#systemctl mask firewalld.service
+
+
+Reboot your system
+#reboot
+verify you ip address 
+# ip a
+192.168.0.10( This is the example, you might have different ip address)
+After this you are ready to solve your exam questions
+
+2 Setup YUM repo as per given yum location http://server.example.com/rhel7
+
+Answer
+
+#mkdir defaultrepo  mv all existing repofile to defaultrepo dir (using mv command)
+
+# cd /etc/yum.repos.d
+vi my.repo                ( make sure your repo file must end on.repo ) and press I
+[agrima]
+name=examrepo
+baseurl=http://server.example.com/rhel7
+gpgcheck=0
+enabled=1
+Save and exit (press Esc :wq)
+#yum clean all
+#yum repolist
+Make sure your just created repo examrepo exists
+
+
+
+(user creation)
+
+
+
+3. Create the following users,groups and supplementary groups.
+
+   i)  Create a group manager.
+
+   ii) Add user natasha and rocky with a secondary group to the manager group.
+
+   iii)Create a user harry with no login shell and who is not a member of manager.
+
+   iv) Set a password for all users as redhat.
+
+Answer
+i. #groupadd manager
+
+ii #useradd natasha
+ #useradd rocky
+ #usermod -aG manager natasha
+ #usermod -aG manager rocky
+Iii useradd -s /sbin/nologin harry
+Iv# passwd natasha
+Type new password for user natasha: password
+Retype new password for user natasha:password
+
+
+
+#password rocky
+
+Type new password for user rocky: password
+Retype new password for user rocky:password
+#password harry
+Type new password for user harry: password
+Retype new password for user harry:password
+
+Now verify using id command
+#id natasha
+#Id rocky
+#Id harry
+
+# su - harry
+Password for harry: password
+User cannot login now
+
+                    (permission)
+4.Create a directory /opt/myshare with following conditions.
+
+   i) change group ownership to managers
+
+   ii)read and write to the members to the managers group but not to others except root.
+
+   iii) Files created under /opt/myshare will have automatically group ownership set to managers.
+
+Answer
+# ls -ld /opt/myshare
+If directory /opt/myshare exists it shows the information here if not no such file or directory message pop up.
+Let’s say you did not have /opt/myshare directory then simply make it 
+#mkdir /opt/myshare
+i #chmod :managers /opt/myshare
+Or 
+#chgrp managers /opt/myshare
+ii chmod 770 /opt/myshare
+Ii #chmod g+s /opt/myshare
+
+5. Copy the file /etc/fstab to /var/tmp.The file should owned by natasha and change the group ownership as managers,  the rocky could read,write and modify it while agrima wouldnot do that.
+#cp /etc/fstab /var/tmp
+#chown natasha:managers /var/tmp/fstab
+Or
+#chown natasha /var/tmp/fstab
+#chgrp managers /var/tmp/fstab
+#setfacl -m u:rocky:rw-  /var/tmp/fstab
+#setfacl -m u:agrima:--- /var/tmp/fstab
+Verify it using command
+#getfacl /var/tmp/fstab
+
+
+                       (Job scheduling)
+6.  Schedule a cronjob by user natasha who runs the command /bin/echo "hiya" at 14:23 everyday.
+
+Verify that package cronie is installed or not
+#rpm -q cronie
+If given packages information then package is installed on that case enable and restart crond if not 
+ run the following command
+# yum install cronie
+#systemctl enable crond
+#systemctl start crond
+#crontab -eu natasha      ( and add the follwoing entry on it)
+23 14 * * * /bin/echo hiya  
+
+Save and exit
+Verify the job that you just scheduled for user natasha
+#crontab -lu natasha
+
+7.Create a cron job that reboots your computer at 2:15 p.m every day  as root.
+Login as user 
+#crontab -eu root
+15 14 * * * systemctl reboot
+And save and exit
+#crontab -lu root
+
+
+
+
+
+
+
+
+8. Configuration your machine as LDAP client. LDAP server and LDAP directory tree 
+information given below.
+a ldapuser10 should be able to log into your system, where X is your station number,but will not have completed the autofs requirement.
+b All ldapuser users have password of "password"
+c.configure LDAP Search Base DN 
+with:dc=example,dc=com
+d. configure LDAP server with the URL: ldap://server1.example.com
+e. Download CA from Certificate URL:
+http://server1.example.com/example-ca.crt
+f. configure AUTOFS for the LDAP user so that the home directory of LDAP USER should be mounted automatically on the Machine.Share location Visa NFS from the 
+server server1.example.com:/home/guests/ldapuserX
+
+Answer
+# yum install  -y openldap-clients nss-pam-ldapd sssd authconfig-gtk
+# authconfig-gtk
+ 
+
+ 
+And click apply
+# systemctl enable sssd
+#systemctl start sssd
+# getent password ldapuser10
+And user the password for ldapuser10 which is password and we should able to login as ldapuser10 in our system but we will not be able to find ldapuser10’s home directory for that we have to install autofs for that please see the command below
+#yum install  -y rpcbind nfs-utils autofs
+# systemctl enable autofs
+#systemctl start autofs
+Verify mannual mount for share mounting on /mnt dir
+#mount.nfs server1.example.com:/home/guests /mnt
+Or 
+
+#df -h
+( nfs share mount point should mount under /mnt dir)
+# umount /mnt
+# vi /etc/auto.master    ( add the entry below after last line)
+/home/guests   /etc/auto.ldap
+ And save and exit
+# vi /etc/auto.ldap   ( add the entry for nfs share for ldapuser10)
+Ldapuser10 -rw server1.example.com:/home/guests/ldapuser10
+# su - ldapuser10 
+Password ldapuser10  so that we should be able to find the ldapusers home directory
+Pwd
+/home/guests/ldapuser10
+
+
+9.. Configure NTP with server1.example.com
+
+# rpm -q chronyd ( verifying if package is installed already if not install)
+# yum install chrony*
+# systemctl enable chronyd
+#systemctl start chronyd
+# vi /etc/chrony.conf
+Disable all default ntp servers in the file and add a line below
+Server server1.example.com iburst
+And save and exit
+# chronyc sources -v 
+If the statrum are 0,1,2,3 we are fine
+
+
+ 10. Implement a web server for the site http://yourhost.expanor.local , then perform the following 
+- Download http://sama.expanor.local/devi/station.html
+- Rename the downloaded file to index.html.
+#yum install httpd*
+#systemctl enable httpd
+#systemctl start httpd
+#systemctl status httpd
+Go to the firefox browser and type the given link above in the question
+ http://yourhost.expanor.local 
+Write clieck on the link and 
+Select save link as 
+Click on filesystem
+Click on var
+Click on tmp
+And save
+#mv /var/tmp/station.html /var/www/html/index.html
+Open the firefox browser and  and type the link as
+http://agrima.expanor.local/var/www/html/index.html
+So that it the content of file index.html should be popped up there
+
+11.Download upgraded kernel package from 
+ftp://rhcert.server10.example.com/bub/x86_64/rhcsa. The upgraded kernel should be the
+default kernel of your system and the original kernel should also be there.
+Answer
+Open the browser (firefox)
+Use the given url  ftp://rhcert.server10.example.com/bub/x86_64/rhcsa
+You will see the lists of file there 
+Just download all file clicking each of them turn by turn 
+Clicking on right click 
+Save link as 
+File system
+Var
+Tmp
+And save
+Repeat the above process for all the files to save on /var/tmp
+Now save your existing kernel on /var/tmp
+#uname -rms |tee -a /var/tmp/old.kernel   ( so that existing kernel will be saved on /var/tmp/old.kernel and prints on the screen as you will have used tee command)
+Now run the command to update the kernel
+#rpm -ivh kernel*
+
+12.Locate all uncommented lines in file /etc/ssh/sshd_config and copy the lines
+in a same order on /root/list file.
+#grep ‘^[#;] /etc/ssh/sshd /var/tmp/ssh.txt
+
+13.Find the string strator from /usr/share/dict/words and copy it to /root/int.txt files 
+     so that original contents remain intact and make sure there
+
+    is no gap between the lines.
+
+  # grep strator /usr/share/dict/words |tr '\n' ' ' > /root/int.txt
+
+
+14. Locate files owned by simon and copy it to /root/found directory.
+#ls -ld /root/found
+# mkdir /root/found
+# find / -user simon -exec cp -ap {} /root/found/ \;
+
+
+
+15.Make a new lvm in a new volume group. Name your volume group as myvol and lvm as mylvm. The size of lvm should be of 64 extents and base size should be 16MB. Permanently mount the logical volume on /datadir directory as ext4 filesystem.
+
+
+Here base 16M time physical extents 64 = 1024M so lets make 1200M size of disk
+#fdisk /dev/vda
+n enter 
+p enter
+Enter
+Enter 
++1200M
+t 
+8e 
+w 
+#partprobe -s /dev/sdb
+#pvcreate /dev/sdb1
+#vgcreate -s 16M myvol /dev/sdb1
+# lvcreate -l 64M -n mylvm myvol
+#mkfs.ext4 /dev/myvol/mylvm
+#blkid /dev/myvol/mylvm
+UUID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#vi /etc/fstab
+Go to the end of the file and enter a new line as
+
+UUID=xxxxxxxxxxxxxxxxxxxxxxxxxx ext4 /datadir defaualts 0 0
+And save and exit
+#mkdir /datadir
+#mount /dev/myvol/mylvm /datadir
+# df -h 
+So file system should be here mounted on /datadir
+
+
+
+
+
+16.. Extend the filesystem /data to 500M.
+
+Answer
+Create one partition of 250M as explained in  because there is alread 250M file system mounted on 
+/data  change the partition to  8e for LVM and perform below commands. /data
+Is already 250M so we have to increase only by 250M to make it 500M.
+Here volume group name is datavg
+Logical volume name is datalv
+#pvcreate /dve/sda6
+#vgextend /datavg /dev/sda6
+#lvextend -L +250M /dev/datavg/datalv  /datavg
+#resize2fs /dev/datavg/datalv
+#df -h /data
+
+
+
+17.. Extend the swap space with "500" MB , don't remove the 
+existing swap. It should be available even after reboot.
+#fdisk /dev/sda
+Type p and enter type n and enter (Create new partition: press e to create extended partition , press p to create the main partition , and the extended partition is further divided in to logical partitions) enter
++500M enter
+ Type t enter  Whose hex code is 82 for swap
+Type w and enter
+#parteprobe /dev/sda ( if did not show up reboot)
+#mkswap /dev/sda7
+#swapon /dev/sda7
+#swapon -a
+#blkid /dev/sda7 (copy UUID)
+#vi /etc/fstab
+UUID=xxxxxxxxx	swap	swap	defaults	0 0
+#swapon -s (to verify)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+18. Resize a filesystem of vgshare-lvshare to 100MIB so that the orignal data remains intact. During this process the size 95 to 105M is acceptable.
+check the mount point in /etc/fstab
+# vi /etc/fstab   ( that lvm vgshare-lvshare was mounted on /lvmpoint)
+unmount file system
+# umount /lvmpoint
+
+# e2fsck -f /dev/vgshare/lvshare
+# resize2fs /dev/vgshare/lvshare 105M
+# lvreduce -L 105 /dev/mapper/vgshare/lvshare
+
+   
+19. Create a gzipped tar archive file /root/varlog.tgz containing all the files in /var/log
+
+Create a gzipped tar archive file /root/varlog.tgz containing all the files in /var/log
+
+# tar -cvzf /root/varlog.tgz /var/log
+
+20  Locate all the files with name "date" and save the output to /tmp/locate.txt
+
+# locate date >> /tmp/locate.txt
+
+
